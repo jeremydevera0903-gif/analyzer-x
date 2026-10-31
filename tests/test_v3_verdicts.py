@@ -436,3 +436,17 @@ def test_publish_prints_coin_names_this_pcs_console_cannot_spell(monkeypatch, tm
     assert vv.main(["publish", "universe"]) == 0
     out.flush()
     assert "牛来_USDT" in raw.getvalue().decode("utf-8")
+
+
+def test_only_a_run_sent_fewer_coins_than_its_plan_calls_itself_a_check(run):
+    """Oct 31, 2026: universe-2 was sent all 228 of the plan's coins and its kept lines still
+    ended "A few coins is a check of the machinery, never the proof" (RCA-2026-10-30-H)."""
+    pilot = json.loads(vv.publish("pilot", now=1_793_000_000.0).read_text(encoding="utf-8"))
+    assert vrs.FEW_COINS in pilot["lines"]
+    state_p = run.tmp / "cloud" / "pilot.json"
+    state = json.loads(state_p.read_text(encoding="utf-8"))
+    state["board"] = list(run.plan["coins"])                 # every coin of the plan was sent
+    state_p.write_text(json.dumps(state), encoding="utf-8")
+    full = json.loads(vv.publish("pilot", now=1_793_000_100.0).read_text(encoding="utf-8"))
+    assert full["dispatched"] == full["plan_coins"] == 4
+    assert vrs.FEW_COINS not in full["lines"]

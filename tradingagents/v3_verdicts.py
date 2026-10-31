@@ -220,6 +220,9 @@ def build(name: str, *, now: float | None = None) -> dict:
         raise ValueError(f"{root} holds no record measured under plan {plan['id']}: collect "
                          f"{name} first")
     lines, verdicts = vrs.report(records, plan, runs, risk)
+    if len(state["board"]) >= len(plan["coins"]):
+        # a run sent every coin of its plan is not "a few coins" (RCA-2026-10-30-H)
+        lines = [ln for ln in lines if ln != vrs.FEW_COINS]
     for v in verdicts:
         v["levels"] = levels(records, v)
         # COVERAGE FIRST beside every verdict (I3): the share of its entries and exits settled

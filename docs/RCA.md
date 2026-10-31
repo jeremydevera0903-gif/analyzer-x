@@ -172,6 +172,40 @@ The old file is kept as `rows.before-rebuild.db`; nothing was deleted, and
 
 ---
 
+## RCA-2026-10-30-H — the verdicts of a full run, kept and printed, still ended with the trial run's sentence "A few coins is a check of the machinery, never the proof"
+
+**CEO**
+
+* What you saw: nothing on a screen - the page and the tab read the run's own size - but the summary printed and kept with the all-coins result (228 coins sent, 221 judged) closed by calling itself a check of a few coins.
+* Why: the judging command always added that sentence, because until Part 2b it only ever judged a few coins on this PC.
+* What stops it now: the kept summary of a run that was sent every coin of its plan leaves the sentence out; a trial run still says it.
+
+**DEV**
+
+* `tradingagents/v3_verdicts.py:publish` kept `v3_research.report`'s `lines` whole, and `report` appends `FEW_COINS` unconditionally (`v3_research.py:393`); the store's own `dispatched` / `plan_coins` already told a pilot from a full run.
+* Invariant broken: **a label is derived from the data it describes** (label-must-match-data) - a sentence about the run's size must read the run's size.
+* Guard: `tests/test_v3_verdicts.py::test_only_a_run_sent_fewer_coins_than_its_plan_calls_itself_a_check` (red before the fix).
+
+**SAW** - the last lines of `python -m tradingagents.v3_verdicts publish universe-2` (Oct 31, 2026): "kept: ...verdicts.json (0 of 27 verdicts passed; 221 of the plan's 228 coins judged)" directly under "A few coins is a check of the machinery, never the proof: the proof pools the whole universe on GitHub (Part 2b)."
+
+**TIMELINE**
+
+1. Oct 30, 2026 9:38pm: `publish universe` (228 sent, 221 judged) kept the sentence in `verdicts.json`'s `lines`; the print crashed before showing it (RCA-2026-10-30-G).
+2. Oct 31, 2026 4:53pm: `publish universe-2` (the same plan after the older days' order books were filled) printed it.
+3. After the fix: the pilot fixture (3 of 4 coins sent) keeps the sentence; the same run sent all 4 leaves it out.
+
+**ROOT CAUSE** - Part 2b reused Part 2a's report lines whole; the one sentence that was true only of Part 2a's few-coin runs was never made conditional.
+
+**WHY IT WAS NOT CAUGHT** - every Part 2b verdict test publishes the pilot fixture (a run sent 3 of its plan's 4 coins), for which the sentence is true; and the page and tab, which the label tests read, never show `lines`.
+
+**COST** - none: the sentence was in the command's printout and the kept file only.
+
+**FIX** - this commit: `v3_verdicts.publish` drops `v3_research.FEW_COINS` from the kept lines when the run's board holds every coin of its plan.
+
+**GUARD** - `tests/test_v3_verdicts.py::test_only_a_run_sent_fewer_coins_than_its_plan_calls_itself_a_check`.
+
+---
+
 ## RCA-2026-10-30-G — `v3_verdicts publish universe` judged all 221 coins, kept the store, then died printing the result: three coin names in Chinese on this PC's console
 
 **CEO**
